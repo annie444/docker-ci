@@ -23,6 +23,7 @@ pipeline {
     PR_IMAGE = 'pr-ci'
     DIST_IMAGE = 'ubuntu'
     MULTIARCH='false'
+    TITLE='Ci'
     CI='false'
     CI_WEB='false'
     CI_PORT='80'
@@ -72,7 +73,7 @@ pipeline {
             script: '''git remote show origin | grep "HEAD branch:" | sed 's|.*HEAD branch: ||' ''',
             returnStdout: true).trim()
           env.CODE_URL = 'https://github.com/' + env.LS_USER + '/' + env.LS_REPO + '/commit/' + env.GIT_COMMIT
-          env.LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' env.IMAGE
+          env.LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' + env.IMAGE
           env.PULL_REQUEST = env.CHANGE_ID
           env.TEMPLATED_FILES = 'Jenkinsfile README.md LICENSE .editorconfig ./.github/CONTRIBUTING.md ./.github/FUNDING.yml ./.github/ISSUE_TEMPLATE/config.yml ./.github/ISSUE_TEMPLATE/issue.bug.yml ./.github/ISSUE_TEMPLATE/issue.feature.yml ./.github/PULL_REQUEST_TEMPLATE.md ./.github/workflows/external_trigger_scheduler.yml ./.github/workflows/greetings.yml ./.github/workflows/package_trigger_scheduler.yml ./.github/workflows/call_issue_pr_tracker.yml ./.github/workflows/call_issues_cron.yml ./.github/workflows/permissions.yml ./.github/workflows/external_trigger.yml'
         }
@@ -170,7 +171,7 @@ pipeline {
       }
       steps {
         script{
-          env.IMAGE = env.DEV_IMAGE
+          env.IMAGE = env.IMAGE
           env.GITHUBIMAGE = 'ghcr.io/' + env.LS_USER + '/' + env.CONTAINER_NAME
           if (env.MULTIARCH == 'true') {
             env.CI_TAGS = 'amd64-' + env.EXT_RELEASE_CLEAN + '-ls' + env.LS_TAG_NUMBER + '|arm64v8-' + env.EXT_RELEASE_CLEAN + '-ls' + env.LS_TAG_NUMBER
@@ -181,7 +182,7 @@ pipeline {
           env.META_TAG = env.EXT_RELEASE_CLEAN + '-ls' + env.LS_TAG_NUMBER
           env.EXT_RELEASE_TAG = 'version-' + env.EXT_RELEASE_CLEAN
           env.VERSIONS_LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' + env.IMAGE + '/versions'
-          env.BUILDCACHE = 'ghcr.io/annie444/dev-buildcache'
+          env.BUILDCACHE = 'ghcr.io/annie444/buildcache'
         }
       }
     }
@@ -227,7 +228,7 @@ pipeline {
           env.EXT_RELEASE_TAG = 'version-' + env.EXT_RELEASE_CLEAN
           env.CODE_URL = 'https://github.com/' + env.LS_USER + '/' + env.LS_REPO + '/pull/' + env.PULL_REQUEST
           env.VERSIONS_LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' + env.PR_IMAGE + '/versions'
-          env.BUILDCACHE = 'ghcr.io/annie444/dev-buildcache'
+          env.BUILDCACHE = 'ghcr.io/annie444/pr-buildcache'
         }
       }
     }
@@ -424,8 +425,8 @@ pipeline {
           --label \"org.opencontainers.image.vendor=jpeg.gay\" \
           --label \"org.opencontainers.image.licenses=GPL-3.0-only\" \
           --label \"org.opencontainers.image.ref.name=${COMMIT_SHA}\" \
-          --label \"org.opencontainers.image.title=Ci\" \
-          --label \"org.opencontainers.image.description=ci image by linuxserver.io\" \
+          --label \"org.opencontainers.image.title=${TITLE}\" \
+          --label \"org.opencontainers.image.description=${TITLE} image by linuxserver.io\" \
           --no-cache --pull -t ${IMAGE}:${META_TAG} --platform=linux/amd64 \
           --provenance=false --sbom=false --builder=container --load \
           --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
@@ -469,15 +470,15 @@ pipeline {
               --label \"org.opencontainers.image.created=${GITHUB_DATE}\" \
               --label \"org.opencontainers.image.authors=linuxserver.io\" \
               --label \"org.opencontainers.image.url=https://github.com/${LS_USER}/${LS_REPO}/packages\" \
-              --label \"org.opencontainers.image.documentation=https://docs.linuxserver.io/images/docker-ci\" \
+              --label \"org.opencontainers.image.documentation=https://docs.linuxserver.io/images/${LS_REPO}\" \
               --label \"org.opencontainers.image.source=https://github.com/${LS_USER}/${LS_REPO}\" \
               --label \"org.opencontainers.image.version=${EXT_RELEASE_CLEAN}-ls${LS_TAG_NUMBER}\" \
               --label \"org.opencontainers.image.revision=${COMMIT_SHA}\" \
               --label \"org.opencontainers.image.vendor=jpeg.gay\" \
               --label \"org.opencontainers.image.licenses=GPL-3.0-only\" \
               --label \"org.opencontainers.image.ref.name=${COMMIT_SHA}\" \
-              --label \"org.opencontainers.image.title=Ci\" \
-              --label \"org.opencontainers.image.description=ci image by linuxserver.io\" \
+              --label \"org.opencontainers.image.title=${TITLE}\" \
+              --label \"org.opencontainers.image.description=${TITLE} image by linuxserver.io\" \
               --no-cache --pull -t ${IMAGE}:amd64-${META_TAG} --platform=linux/amd64 \
               --provenance=false --sbom=false --builder=container --load \
               --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
@@ -530,8 +531,8 @@ pipeline {
               --label \"org.opencontainers.image.vendor=jpeg.gay\" \
               --label \"org.opencontainers.image.licenses=GPL-3.0-only\" \
               --label \"org.opencontainers.image.ref.name=${COMMIT_SHA}\" \
-              --label \"org.opencontainers.image.title=Ci\" \
-              --label \"org.opencontainers.image.description=ci image by linuxserver.io\" \
+              --label \"org.opencontainers.image.title=${TITLE}\" \
+              --label \"org.opencontainers.image.description=${TITLE} image by linuxserver.io\" \
               --no-cache --pull -f Dockerfile.aarch64 -t ${IMAGE}:arm64v8-${META_TAG} --platform=linux/arm64 \
               --provenance=false --sbom=false --builder=container --load \
               --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
