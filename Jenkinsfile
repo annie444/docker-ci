@@ -32,6 +32,9 @@ pipeline {
     CI_DOCKERENV=''
     CI_AUTH=''
     CI_WEBPATH=''
+    S3_ENDPOINT = 's3.jpeg.gay'
+    S3_BUCKET = 'ci-tests.jpeg.gay'
+    S3_REGION = 'us-west-2'
   }
   stages {
     stage("Set git config"){
@@ -182,7 +185,7 @@ pipeline {
           env.META_TAG = env.EXT_RELEASE_CLEAN + '-ls' + env.LS_TAG_NUMBER
           env.EXT_RELEASE_TAG = 'version-' + env.EXT_RELEASE_CLEAN
           env.VERSIONS_LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' + env.IMAGE + '/versions'
-          env.BUILDCACHE = 'ghcr.io/annie444/buildcache'
+          env.BUILDCACHE = 'ghcr.io/' + env.LS_USER + '/dev-buildcache'
         }
       }
     }
@@ -205,7 +208,7 @@ pipeline {
           env.META_TAG = env.EXT_RELEASE_CLEAN + '-pkg-' + env.PACKAGE_TAG + '-dev-' + env.COMMIT_SHA
           env.EXT_RELEASE_TAG = 'version-' + env.EXT_RELEASE_CLEAN
           env.VERSIONS_LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' + env.DEV_IMAGE + '/versions'
-          env.BUILDCACHE = 'ghcr.io/annie444/dev-buildcache'
+          env.BUILDCACHE = 'ghcr.io/' + env.LS_USER + '/dev-buildcache'
         }
       }
     }
@@ -228,7 +231,7 @@ pipeline {
           env.EXT_RELEASE_TAG = 'version-' + env.EXT_RELEASE_CLEAN
           env.CODE_URL = 'https://github.com/' + env.LS_USER + '/' + env.LS_REPO + '/pull/' + env.PULL_REQUEST
           env.VERSIONS_LINK = 'https://github.com/users/' + env.LS_USER + '/packages/container/' + env.PR_IMAGE + '/versions'
-          env.BUILDCACHE = 'ghcr.io/annie444/pr-buildcache'
+          env.BUILDCACHE = 'ghcr.io/' + env.LS_USER + '/dev-buildcache'
         }
       }
     }
@@ -256,7 +259,7 @@ pipeline {
                     python3 -m venv /lsiopy && \
                     pip install --no-cache-dir -U pip && \
                     pip install --no-cache-dir s3cmd && \
-                    s3cmd put --no-preserve --acl-public -m text/xml --region us-west-2 --host s3.jpeg.gay /mnt/shellcheck-result.xml s3://ci-tests.jpeg.gay/${IMAGE}/${META_TAG}/shellcheck-result.xml" || :'''
+                    s3cmd put --no-preserve --acl-public -m text/xml --region ${S3_REGION} --host ${S3_ENDPOINT} /mnt/shellcheck-result.xml s3://${S3_BUCKET}/${IMAGE}/${META_TAG}/shellcheck-result.xml" || :'''
         }
       }
     }
@@ -291,8 +294,8 @@ pipeline {
                 cp ${TEMPDIR}/docker-${CONTAINER_NAME}/Jenkinsfile ${TEMPDIR}/repo/${LS_REPO}/
                 git add Jenkinsfile
                 git commit -m 'Bot Updating Templated Files'
-                git pull https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
-                git push https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git pull https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git push https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
                 echo "true" > /tmp/${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Updating Jenkinsfile and exiting build, new one will trigger based on commit"
                 rm -Rf ${TEMPDIR}
@@ -316,8 +319,8 @@ pipeline {
                   git rm "${i}"
                 done
                 git commit -m 'Bot Updating Templated Files'
-                git pull https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
-                git push https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git pull https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git push https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
                 echo "true" > /tmp/${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Deleting old/deprecated templates and exiting build, new one will trigger based on commit"
                 rm -Rf ${TEMPDIR}
@@ -346,8 +349,8 @@ pipeline {
                 fi
                 git add readme-vars.yml ${TEMPLATED_FILES}
                 git commit -m 'Bot Updating Templated Files'
-                git pull https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
-                git push https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git pull https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git push https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
                 echo "true" > /tmp/${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Updating templates and exiting build, new one will trigger based on commit"
                 rm -Rf ${TEMPDIR}
@@ -440,7 +443,7 @@ pipeline {
         retry_backoff(5,5) {
             sh '''#! /bin/bash
                   set -e
-                  echo $GITHUB_TOKEN | docker login ghcr.io -u annie444 --password-stdin
+                  echo $GITHUB_TOKEN | docker login ghcr.io -u ${LS_USER} --password-stdin
                   if [[ "${PACKAGE_CHECK}" != "true" ]]; then
                     IFS=',' read -ra CACHE <<< "$BUILDCACHE"
                     for i in "${CACHE[@]}"; do
@@ -500,7 +503,7 @@ pipeline {
               retry_backoff(5,5) {
                   sh '''#! /bin/bash
                         set -e
-                        echo $GITHUB_TOKEN | docker login ghcr.io -u annie444 --password-stdin
+                        echo $GITHUB_TOKEN | docker login ghcr.io -u ${LS_USER} --password-stdin
                         if [[ "${PACKAGE_CHECK}" != "true" ]]; then
                           IFS=',' read -ra CACHE <<< "$BUILDCACHE"
                           for i in "${CACHE[@]}"; do
@@ -554,7 +557,7 @@ pipeline {
               retry_backoff(5,5) {
                   sh '''#! /bin/bash
                         set -e
-                        echo $GITHUB_TOKEN | docker login ghcr.io -u annie444 --password-stdin
+                        echo $GITHUB_TOKEN | docker login ghcr.io -u ${LS_USER} --password-stdin
                         if [[ "${PACKAGE_CHECK}" != "true" ]]; then
                           IFS=',' read -ra CACHE <<< "$BUILDCACHE"
                           for i in "${CACHE[@]}"; do
@@ -608,8 +611,8 @@ pipeline {
                 wait
                 git add package_versions.txt
                 git commit -m 'Bot Updating Package Versions'
-                git pull https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
-                git push https://annie444:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git pull https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
+                git push https://${LS_USER}:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git master
                 echo "true" > /tmp/packages-${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Package tag updated, stopping build process"
               else
@@ -683,10 +686,10 @@ pipeline {
                     CI_DOCKERENV="LSIO_FIRST_PARTY=true"
                   fi
                 fi
-                docker pull ghcr.io/annie444/ci:latest
+                docker pull ghcr.io/${LS_USER}/ci:latest
                 if [ "${MULTIARCH}" == "true" ]; then
-                  docker pull ghcr.io/annie444/dev-buildcache:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER} --platform=arm64
-                  docker tag ghcr.io/annie444/dev-buildcache:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER} ${IMAGE}:arm64v8-${META_TAG}
+                  docker pull ghcr.io/${LS_USER}/dev-buildcache:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER} --platform=arm64
+                  docker tag ghcr.io/${LS_USER}/dev-buildcache:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER} ${IMAGE}:arm64v8-${META_TAG}
                 fi
                 docker run --rm \
                 --shm-size=1gb \
@@ -697,6 +700,9 @@ pipeline {
                 -e META_TAG=\"${META_TAG}\" \
                 -e RELEASE_TAG=\"latest\" \
                 -e PORT=\"${CI_PORT}\" \
+                -e S3_ENDPOINT=\"${S3_ENDPOINT}\" \
+                -e S3_BUCKET=\"${S3_BUCKET}\" \
+                -e S3_REGION=\"${S3_REGION}\" \
                 -e SSL=\"${CI_SSL}\" \
                 -e BASE=\"${DIST_IMAGE}\" \
                 -e SECRET_KEY=\"${S3_SECRET}\" \
@@ -706,7 +712,7 @@ pipeline {
                 -e WEB_AUTH=\"${CI_AUTH}\" \
                 -e WEB_PATH=\"${CI_WEBPATH}\" \
                 -e NODE_NAME=\"${NODE_NAME}\" \
-                -t ghcr.io/annie444/ci:latest \
+                -t ghcr.io/${LS_USER}/ci:latest \
                 python3 test_build.py'''
         }
       }
@@ -796,7 +802,7 @@ pipeline {
              "object": "'${COMMIT_SHA}'",\
              "message": "Tagging Release '${EXT_RELEASE_CLEAN}'-ls'${LS_TAG_NUMBER}' to master",\
              "type": "commit",\
-             "tagger": {"name": "annie444","email": "ci@jpeg.gay","date": "'${GITHUB_DATE}'"}}' '''
+             "tagger": {"name": "${LS_USER}","email": "ci@jpeg.gay","date": "'${GITHUB_DATE}'"}}' '''
         echo "Pushing New release for Tag"
         sh '''#! /bin/bash
               echo "Updating base packages to ${PACKAGE_TAG}" > releasebody.json
