@@ -8,12 +8,12 @@ release_tag: latest
 ls_branch: master
 repo_vars:
   - BUILD_VERSION_ARG = 'OS'
-  - LS_USER = 'linuxserver'
+  - LS_USER = 'annie444'
   - LS_REPO = 'docker-ci'
   - CONTAINER_NAME = 'ci'
-  - DOCKERHUB_IMAGE = 'linuxserver/ci'
-  - DEV_DOCKERHUB_IMAGE = 'lsiodev/ci'
-  - PR_DOCKERHUB_IMAGE = 'lspipepr/ci'
+  - DOCKERHUB_IMAGE = 'annie444/ci'
+  - DEV_DOCKERHUB_IMAGE = 'annie444/dev-ci'
+  - PR_DOCKERHUB_IMAGE = 'annie444/pr-ci'
   - DIST_IMAGE = 'ubuntu'
   - MULTIARCH='false'
   - CI='false'

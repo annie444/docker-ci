@@ -30,7 +30,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
-from pyvirtualdisplay import Display
+from pyvirtualdisplay.display import Display
 
 logger: Logger = logging.getLogger(__name__)
 
@@ -77,15 +77,16 @@ class SetEnvs():
         self.screenshot: bool = os.environ.get("WEB_SCREENSHOT", "false").lower() == "true"
 
         # Make sure the numeric values are set even if they are set to empty strings in the environment
-        self.screenshot_timeout: int = (os.environ.get("WEB_SCREENSHOT_TIMEOUT", "120") or "120")
-        self.screenshot_delay: int = (os.environ.get("WEB_SCREENSHOT_DELAY", "10") or "10")
-        self.logs_timeout: int = (os.environ.get("DOCKER_LOGS_TIMEOUT", "120") or "120")
-        self.sbom_timeout: int = (os.environ.get("SBOM_TIMEOUT", "900") or "900")
-        self.port: int = (os.environ.get("PORT", "80") or "80")
+        self.screenshot_timeout: int = int(os.environ.get("WEB_SCREENSHOT_TIMEOUT", "120")) or 120
+        self.screenshot_delay: int = int(os.environ.get("WEB_SCREENSHOT_DELAY", "10")) or 10
+        self.logs_timeout: int = int(os.environ.get("DOCKER_LOGS_TIMEOUT", "120")) or 120
+        self.sbom_timeout: int = int(os.environ.get("SBOM_TIMEOUT", "900")) or 900
+        self.port: int = int(os.environ.get("PORT", "80") or "80")
         self.builder: str = os.environ.get("NODE_NAME", "-")
         self.ssl: str = os.environ.get("SSL", "false")
-        self.region: str = os.environ.get("S3_REGION", "us-east-1")
-        self.bucket: str = os.environ.get("S3_BUCKET", "ci-tests.linuxserver.io")
+        self.region: str = os.environ.get("S3_REGION", "us-west-2")
+        self.bucket: str = os.environ.get("S3_BUCKET", "ci-tests.jpeg.gay")
+        self.s3_endpoint: str | None = os.environ.get("S3_ENDPOINT", None) or None
         self.release_tag: str = os.environ.get("RELEASE_TAG", "latest")
 
         if os.environ.get("DELAY_START"):
@@ -166,7 +167,7 @@ class SetEnvs():
             return [f"{k}:{v}" for k,v in (item.split("=") for item in kv.split("|") if item and "=" in item and item.split('=')[1])]
         return dict((item.split('=') for item in kv.split('|') if item and "=" in item and item.split('=')[1]))
 
-    def convert_env(self, envs:str = None) -> dict[str,str]:
+    def convert_env(self, envs: str | None = None) -> dict[str,str]:
         """Convert env DOCKER_ENV to dictionary
 
         Args:
@@ -189,7 +190,7 @@ class SetEnvs():
                 raise CIError(f"Failed converting DOCKER_ENV: {envs} to dictionary") from error
         return env_dict
 
-    def convert_volumes(self, volumes:str = None) -> list[str]:
+    def convert_volumes(self, volumes: str | None = None) -> list[str]:
         """Convert env DOCKER_VOLUMES to list
 
         Args:
@@ -222,6 +223,7 @@ class SetEnvs():
             self.base: str = os.environ["BASE"]
             self.s3_key: str = os.environ["ACCESS_KEY"]
             self.s3_secret: str = os.environ["SECRET_KEY"]
+            self.s3_endpoint: str = os.environ["S3_ENDPOINT"]
             self.meta_tag: str = os.environ["META_TAG"]
             self.tags_env: str = os.environ["TAGS"]
         except KeyError as error:
@@ -521,11 +523,11 @@ class CI(SetEnvs):
         _, container_name = self.image.split("/")
         match self.image:
             case _ if "lspipepr" in self.image:
-                return f"linuxserver/lspipepr-{container_name}"
+                return f"annie444/pr-{container_name}"
             case _ if "lsiodev" in self.image:
-                return f"linuxserver/lsiodev-{container_name}"
+                return f"annie444/dev-{container_name}"
             case _ if "lsiobase" in self.image:
-                return f"linuxserver/docker-baseimage-{container_name}"
+                return f"annie444/docker-baseimage-{container_name}"
             case _:
                 return self.image
 
@@ -541,11 +543,11 @@ class CI(SetEnvs):
         _, container_name = self.image.split("/")
         match self.image:
             case _ if "lspipepr" in self.image:
-                return f"https://ghcr.io/linuxserver/lspipepr-{container_name}:{tag}"
+                return f"https://ghcr.io/annie444/pr-{container_name}:{tag}"
             case _ if "lsiodev" in self.image:
-                return f"https://ghcr.io/linuxserver/lsiodev-{container_name}:{tag}"
+                return f"https://ghcr.io/annie444/dev-{container_name}:{tag}"
             case _ if "lsiobase" in self.image:
-                return f"https://ghcr.io/linuxserver/baseimage-{container_name}:{tag}"
+                return f"https://ghcr.io/annie444/baseimage-{container_name}:{tag}"
             case _:
                 return f"https://ghcr.io/{self.image}:{tag}"
 
@@ -873,7 +875,7 @@ class CI(SetEnvs):
             Container/str: Returns the tester Container object and the tester endpoint
         """
         self.logger.info("Starting tester container for tag: %s", tag)
-        testercontainer: Container = self.client.containers.run("ghcr.io/linuxserver/tester:latest",
+        testercontainer: Container = self.client.containers.run("ghcr.io/annie444/tester:latest",
                                                      shm_size="1G",
                                                      security_opt=["seccomp=unconfined"],
                                                      detach=True,
@@ -918,7 +920,15 @@ class CI(SetEnvs):
         Returns:
             Session.client: An S3 client.
         """
-        s3_client = boto3.Session().client(
+        if self.s3_endpoint is not None:
+            s3_client: boto3.client = boto3.Session().client(
+                "s3",
+                region_name=self.region,
+                aws_access_key_id=self.s3_key,
+                aws_secret_access_key=self.s3_secret,
+                endpoint_url=self.s3_endpoint) 
+        else:
+            s3_client: boto3.client = boto3.Session().client(
                 "s3",
                 region_name=self.region,
                 aws_access_key_id=self.s3_key,
