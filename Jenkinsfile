@@ -821,49 +821,6 @@ EOF
             git config --global --unset user.signingkey
             git config --global --unset commit.gpgsign
         '''
-      script{
-        env.JOB_DATE = sh(
-            script: '''date '+%Y-%m-%dT%H:%M:%S%:z' ''',
-            returnStdout: true).trim()
-        if (env.EXIT_STATUS == "ABORTED"){
-          sh 'echo "build aborted"'
-        }else{
-          if (currentBuild.currentResult == "SUCCESS"){
-            if (env.GITHUBIMAGE =~ /pr/){
-              env.JOB_WEBHOOK_STATUS='Success'
-              env.JOB_WEBHOOK_COLOUR=3957028
-              env.JOB_WEBHOOK_FOOTER='PR Build'
-            }else if (env.GITHUBIMAGE =~ /dev/){
-              env.JOB_WEBHOOK_STATUS='Success'
-              env.JOB_WEBHOOK_COLOUR=3957028
-              env.JOB_WEBHOOK_FOOTER='Dev Build'
-            }else{
-              env.JOB_WEBHOOK_STATUS='Success'
-              env.JOB_WEBHOOK_COLOUR=1681177
-              env.JOB_WEBHOOK_FOOTER='Live Build'
-            }
-          }else{
-            if (env.GITHUBIMAGE =~ /pr/){
-              env.JOB_WEBHOOK_STATUS='Failure'
-              env.JOB_WEBHOOK_COLOUR=12669523
-              env.JOB_WEBHOOK_FOOTER='PR Build'
-            }else if (env.GITHUBIMAGE =~ /dev/){
-              env.JOB_WEBHOOK_STATUS='Failure'
-              env.JOB_WEBHOOK_COLOUR=12669523
-              env.JOB_WEBHOOK_FOOTER='Dev Build'
-            }else{
-              env.JOB_WEBHOOK_STATUS='Failure'
-              env.JOB_WEBHOOK_COLOUR=16711680
-              env.JOB_WEBHOOK_FOOTER='Live Build'
-            }
-          }
-          sh ''' curl -X POST -H "Content-Type: application/json" --data '{"avatar_url": "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/jenkins-avatar.png","embeds": [{"'color'": '${JOB_WEBHOOK_COLOUR}',\
-                 "footer": {"text" : "'"${JOB_WEBHOOK_FOOTER}"'"},\
-                 "timestamp": "'${JOB_DATE}'",\
-                 "description": "**Build:**  '${BUILD_NUMBER}'\\n**CI Results:**  '${CI_URL}'\\n**ShellCheck Results:**  '${SHELLCHECK_URL}'\\n**Status:**  '${JOB_WEBHOOK_STATUS}'\\n**Job:** '${RUN_DISPLAY_URL}'\\n**Change:** '${CODE_URL}'\\n**External Release:**: '${RELEASE_LINK}'\\n**DockerHub:** '${LINK}'\\n"}],\
-                 "username": "Jenkins"}' ${BUILDS_DISCORD} '''
-        }
-      }
     }
     cleanup {
       sh '''#! /bin/bash
